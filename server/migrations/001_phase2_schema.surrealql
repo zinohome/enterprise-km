@@ -1,0 +1,89 @@
+-- Phase 2: 多用户系统 Schema 扩展
+
+-- 用户表
+DEFINE TABLE IF NOT EXISTS user SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS username ON user TYPE string;
+DEFINE FIELD IF NOT EXISTS password_hash ON user TYPE string;
+DEFINE FIELD IF NOT EXISTS email ON user TYPE string;
+DEFINE FIELD IF NOT EXISTS display_name ON user TYPE string;
+DEFINE FIELD IF NOT EXISTS role ON user TYPE string DEFAULT 'viewer';
+DEFINE FIELD IF NOT EXISTS department ON user TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS avatar_url ON user TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS created_at ON user TYPE datetime DEFAULT time::now();
+DEFINE FIELD IF NOT EXISTS updated_at ON user TYPE datetime DEFAULT time::now();
+DEFINE INDEX IF NOT EXISTS idx_user_username ON user COLUMNS username UNIQUE;
+DEFINE INDEX IF NOT EXISTS idx_user_email ON user COLUMNS email UNIQUE;
+
+-- 团队表
+DEFINE TABLE IF NOT EXISTS team SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS name ON team TYPE string;
+DEFINE FIELD IF NOT EXISTS description ON team TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS owner_id ON team TYPE string;
+DEFINE FIELD IF NOT EXISTS created_at ON team TYPE datetime DEFAULT time::now();
+
+-- 用户-团队关联
+DEFINE TABLE IF NOT EXISTS team_member SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS team_id ON team_member TYPE string;
+DEFINE FIELD IF NOT EXISTS user_id ON team_member TYPE string;
+DEFINE FIELD IF NOT EXISTS role ON team_member TYPE string DEFAULT 'member';
+DEFINE FIELD IF NOT EXISTS joined_at ON team_member TYPE datetime DEFAULT time::now();
+
+-- 审计日志
+DEFINE TABLE IF NOT EXISTS audit_log SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS user_id ON audit_log TYPE string;
+DEFINE FIELD IF NOT EXISTS action ON audit_log TYPE string;
+DEFINE FIELD IF NOT EXISTS resource_type ON audit_log TYPE string;
+DEFINE FIELD IF NOT EXISTS resource_id ON audit_log TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS details ON audit_log TYPE option<object>;
+DEFINE FIELD IF NOT EXISTS ip_address ON audit_log TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS created_at ON audit_log TYPE datetime DEFAULT time::now();
+
+-- 知识库分类
+DEFINE TABLE IF NOT EXISTS knowledge_category SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS name ON knowledge_category TYPE string;
+DEFINE FIELD IF NOT EXISTS parent_id ON knowledge_category TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS description ON knowledge_category TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS sort_order ON knowledge_category TYPE int DEFAULT 0;
+DEFINE FIELD IF NOT EXISTS created_at ON knowledge_category TYPE datetime DEFAULT time::now();
+
+-- 审批记录
+DEFINE TABLE IF NOT EXISTS approval SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS source_id ON approval TYPE string;
+DEFINE FIELD IF NOT EXISTS submitter_id ON approval TYPE string;
+DEFINE FIELD IF NOT EXISTS reviewer_id ON approval TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS status ON approval TYPE string DEFAULT 'pending';
+DEFINE FIELD IF NOT EXISTS comment ON approval TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS created_at ON approval TYPE datetime DEFAULT time::now();
+DEFINE FIELD IF NOT EXISTS updated_at ON approval TYPE datetime DEFAULT time::now();
+
+-- 通知表
+DEFINE TABLE IF NOT EXISTS notification SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS user_id ON notification TYPE string;
+DEFINE FIELD IF NOT EXISTS title ON notification TYPE string;
+DEFINE FIELD IF NOT EXISTS message ON notification TYPE string;
+DEFINE FIELD IF NOT EXISTS type ON notification TYPE string DEFAULT 'info';
+DEFINE FIELD IF NOT EXISTS link ON notification TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS read ON notification TYPE bool DEFAULT false;
+DEFINE FIELD IF NOT EXISTS created_at ON notification TYPE datetime DEFAULT time::now();
+
+-- 同步状态表
+DEFINE TABLE IF NOT EXISTS sync_state SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS user_id ON sync_state TYPE string;
+DEFINE FIELD IF NOT EXISTS directory ON sync_state TYPE string;
+DEFINE FIELD IF NOT EXISTS running ON sync_state TYPE bool DEFAULT false;
+DEFINE FIELD IF NOT EXISTS lastSync ON sync_state TYPE string DEFAULT '从未同步';
+DEFINE FIELD IF NOT EXISTS fileCount ON sync_state TYPE int DEFAULT 0;
+
+-- 改造现有表：加 owner_id 和 visibility
+DEFINE FIELD IF NOT EXISTS owner_id ON notebook TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS visibility ON notebook TYPE string DEFAULT 'private';
+DEFINE FIELD IF NOT EXISTS team_id ON notebook TYPE option<string>;
+
+DEFINE FIELD IF NOT EXISTS owner_id ON source TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS visibility ON source TYPE string DEFAULT 'private';
+DEFINE FIELD IF NOT EXISTS category_id ON source TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS tags ON source TYPE option<array<string>>;
+DEFINE FIELD IF NOT EXISTS status ON source TYPE string DEFAULT 'draft';
+
+DEFINE FIELD IF NOT EXISTS owner_id ON note TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS visibility ON note TYPE string DEFAULT 'private';

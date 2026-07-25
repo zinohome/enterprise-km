@@ -1,0 +1,17 @@
+{
+  "title": "Enterprise KM Overview",
+  "panels": [
+    {
+      "title": "API Requests",
+      "targets": [{ "expr": "rate(http_requests_total[5m])" }]
+    },
+    {
+      "title": "Active Users",
+      "targets": [{ "expr": "active_users" }]
+    },
+    {
+      "title": "Document Count",
+      "targets": [{ "expr": "document_count" }]
+    }
+  ]
+}

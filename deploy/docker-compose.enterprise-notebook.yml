@@ -1,0 +1,24 @@
+name: enterprise-km-notebook
+
+services:
+  enterprise_notebook:
+    image: lfnovo/open_notebook:v1-latest
+    ports:
+      - "5058:5055"
+    environment:
+      - OPEN_NOTEBOOK_ENCRYPTION_KEY=enterprise_km_notebook_enc_key_2024
+      - SURREAL_URL=ws://surrealdb:8000/rpc
+      - SURREAL_USER=root
+      - SURREAL_PASSWORD=root
+      - SURREAL_NAMESPACE=enterprise_km
+      - SURREAL_DATABASE=enterprise_km
+    volumes:
+      - /data/enterprise-km-notebook/data:/app/data
+    restart: always
+    pull_policy: always
+    networks:
+      - 1panel-network
+
+networks:
+  1panel-network:
+    external: true

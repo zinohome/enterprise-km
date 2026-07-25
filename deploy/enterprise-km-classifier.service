@@ -1,0 +1,15 @@
+[Unit]
+Description=Enterprise KM Classifier
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/enterprise-km
+ExecStart=/opt/enterprise-km/.venv/bin/python -m uvicorn classifier.main:app --host 0.0.0.0 --port 5057
+Restart=always
+RestartSec=5
+Environment=PATH=/opt/enterprise-km/.venv/bin:/usr/bin
+
+[Install]
+WantedBy=multi-user.target

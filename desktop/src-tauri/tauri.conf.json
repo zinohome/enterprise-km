@@ -1,0 +1,88 @@
+{
+  "productName": "企业知识管理",
+  "version": "0.1.0",
+  "identifier": "com.enterprise.km",
+  "build": {
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../out"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "企业知识管理",
+        "width": 1200,
+        "height": 800,
+        "center": true,
+        "minWidth": 900,
+        "minHeight": 600
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "tooltip": "企业知识管理 - 个人知识库 + 企业知识库"
+    },
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' http://localhost:5055 https://* http://*; style-src 'self' 'unsafe-inline'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../scripts/setup.sh": "scripts/setup.sh",
+      "../scripts/setup.bat": "scripts/setup.bat",
+      "../scripts/bin/rclone": "scripts/bin/rclone",
+      "../scripts/bin/surreal": "scripts/bin/surreal"
+    },
+    "windows": {
+      "wix": {
+        "language": "zh-CN"
+      },
+      "nsis": {
+        "languages": ["SimpChinese", "English"],
+        "installMode": "currentUser"
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    },
+    "linux": {
+      "deb": {
+        "depends": ["python3", "python3-venv", "curl", "unzip"]
+      }
+    }
+  },
+  "plugins": {
+    "shell": {
+      "open": true,
+      "scope": [
+        {
+          "name": "rclone",
+          "cmd": "rclone",
+          "args": true
+        },
+        {
+          "name": "python",
+          "cmd": "python3",
+          "args": true
+        },
+        {
+          "name": "bash-setup",
+          "cmd": "bash",
+          "args": true
+        }
+      ]
+    },
+    "autostart": {
+      "enabled": true
+    }
+  }
+}

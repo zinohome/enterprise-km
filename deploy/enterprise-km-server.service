@@ -1,0 +1,16 @@
+[Unit]
+Description=Enterprise KM Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/enterprise-km
+ExecStart=/opt/enterprise-km/.venv/bin/python -m uvicorn server.main:app --host 0.0.0.0 --port 5056
+Restart=always
+RestartSec=5
+Environment=PATH=/opt/enterprise-km/.venv/bin:/usr/bin
+Environment=JWT_SECRET=FROV_OzBmA_ZonUEizPhdf-CZa39ezQCEbwJBJpWDXtu2P277FqpaUkJuODZeT8rGR_h2t6H2vKRkMGVDJlBIQ
+
+[Install]
+WantedBy=multi-user.target
