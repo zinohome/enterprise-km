@@ -1,0 +1,20 @@
+"""Worker configuration."""
+import os
+
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin123")
+MINIO_BUCKET = os.getenv("MINIO_BUCKET", "enterprise-km")
+SURREALDB_URL = os.getenv("SURREALDB_URL", "ws://localhost:8000/rpc")
+SURREALDB_USER = os.getenv("SURREALDB_USER", "root")
+SURREALDB_PASS = os.getenv("SURREALDB_PASS", "root")
+SURREALDB_NS = os.getenv("SURREALDB_NS", "enterprise_km")
+SURREALDB_DB = os.getenv("SURREALDB_DB", "enterprise_km")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://192.168.66.163:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "bge-m3")
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+MEILISEARCH_URL = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
+MEILISEARCH_KEY = os.getenv("MEILISEARCH_KEY", "enterprise-km-master-key")
+MAX_RETRIES = int(os.getenv("MAX_RETRIES", "3"))

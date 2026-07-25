@@ -1,0 +1,1 @@
+"""Search core package."""

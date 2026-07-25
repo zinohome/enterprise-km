@@ -1,0 +1,12 @@
+[project]
+name = "enterprise-km-search"
+version = "0.2.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "meilisearch>=0.30",
+    "qdrant-client>=1.0",
+    "httpx>=0.28",
+    "loguru>=0.7",
+]

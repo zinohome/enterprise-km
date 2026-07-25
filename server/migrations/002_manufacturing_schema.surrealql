@@ -1,0 +1,170 @@
+-- ============================================================
+-- Phase 2: 制造业知识模型 Schema
+-- 5 种制造业核心知识类型 + 知识图谱关系
+-- ============================================================
+
+-- ─── 故障分析报告 (FA Report) ───
+DEFINE TABLE fa_report SCHEMAFULL;
+DEFINE FIELD phenomenon ON fa_report TYPE string
+    COMMENT "故障现象描述";
+DEFINE FIELD root_cause ON fa_report TYPE string
+    COMMENT "根本原因分析";
+DEFINE FIELD solution ON fa_report TYPE string
+    COMMENT "解决措施";
+DEFINE FIELD part_number ON fa_report TYPE option<string>
+    COMMENT "关联零件号";
+DEFINE FIELD production_line ON fa_report TYPE option<string>
+    COMMENT "关联产线";
+DEFINE FIELD equipment ON fa_report TYPE option<string>
+    COMMENT "关联设备";
+DEFINE FIELD severity ON fa_report TYPE option<string>
+    COMMENT "严重程度: critical/major/minor";
+DEFINE FIELD report_date ON fa_report TYPE option<datetime>
+    COMMENT "报告日期";
+DEFINE FIELD author ON fa_report TYPE option<string>
+    COMMENT "作者";
+DEFINE FIELD source_id ON fa_report TYPE record<source>
+    COMMENT "关联原始文档";
+DEFINE FIELD owner_id ON fa_report TYPE record<user>
+    COMMENT "所有者";
+DEFINE FIELD visibility ON fa_report TYPE string DEFAULT "private"
+    COMMENT "可见性: private/team/public";
+DEFINE FIELD team_ids ON fa_report TYPE option<array>
+    COMMENT "可见团队";
+DEFINE FIELD status ON fa_report TYPE string DEFAULT "draft"
+    COMMENT "状态: draft/pending_review/published/rejected";
+DEFINE FIELD created_at ON fa_report TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated_at ON fa_report TYPE datetime DEFAULT time::now();
+DEFINE INDEX idx_fa_part_number ON fa_report FIELDS part_number;
+DEFINE INDEX idx_fa_line ON fa_report FIELDS production_line;
+DEFINE INDEX idx_fa_status ON fa_report FIELDS status;
+DEFINE INDEX idx_fa_owner ON fa_report FIELDS owner_id;
+
+-- ─── 工程变更通知 (ECN) ───
+DEFINE TABLE ecn SCHEMAFULL;
+DEFINE FIELD change_reason ON ecn TYPE string
+    COMMENT "变更原因";
+DEFINE FIELD impact_scope ON ecn TYPE string
+    COMMENT "影响范围";
+DEFINE FIELD approval_chain ON ecn TYPE option<array>
+    COMMENT "审批记录 [{approver, date, decision}]";
+DEFINE FIELD effective_date ON ecn TYPE option<datetime>
+    COMMENT "生效日期";
+DEFINE FIELD related_parts ON ecn TYPE option<array>
+    COMMENT "关联零件号列表";
+DEFINE FIELD change_type ON ecn TYPE option<string>
+    COMMENT "变更类型: design/process/material/supplier";
+DEFINE FIELD before_state ON ecn TYPE option<string>
+    COMMENT "变更前状态";
+DEFINE FIELD after_state ON ecn TYPE option<string>
+    COMMENT "变更后状态";
+DEFINE FIELD source_id ON ecn TYPE record<source>;
+DEFINE FIELD owner_id ON ecn TYPE record<user>;
+DEFINE FIELD visibility ON ecn TYPE string DEFAULT "private";
+DEFINE FIELD team_ids ON ecn TYPE option<array>;
+DEFINE FIELD status ON ecn TYPE string DEFAULT "draft";
+DEFINE FIELD created_at ON ecn TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated_at ON ecn TYPE datetime DEFAULT time::now();
+DEFINE INDEX idx_ecn_parts ON ecn FIELDS related_parts;
+DEFINE INDEX idx_ecn_type ON ecn FIELDS change_type;
+DEFINE INDEX idx_ecn_status ON ecn FIELDS status;
+
+-- ─── 工艺规范 (Process Spec) ───
+DEFINE TABLE process_spec SCHEMAFULL;
+DEFINE FIELD parameters ON process_spec TYPE option<object>
+    COMMENT "工艺参数 {param_name: value}";
+DEFINE FIELD applicable_products ON process_spec TYPE option<array>
+    COMMENT "适用产品列表";
+DEFINE FIELD version_history ON process_spec TYPE option<array>
+    COMMENT "版本历史 [{version, date, changes}]";
+DEFINE FIELD process_type ON process_spec TYPE option<string>
+    COMMENT "工艺类型: injection/stamping/welding/assembly/...";
+DEFINE FIELD source_id ON process_spec TYPE record<source>;
+DEFINE FIELD owner_id ON process_spec TYPE record<user>;
+DEFINE FIELD visibility ON process_spec TYPE string DEFAULT "private";
+DEFINE FIELD team_ids ON process_spec TYPE option<array>;
+DEFINE FIELD status ON process_spec TYPE string DEFAULT "draft";
+DEFINE FIELD created_at ON process_spec TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated_at ON process_spec TYPE datetime DEFAULT time::now();
+DEFINE INDEX idx_ps_type ON process_spec FIELDS process_type;
+DEFINE INDEX idx_ps_status ON process_spec FIELDS status;
+
+-- ─── 质检标准 (Quality Standard) ───
+DEFINE TABLE quality_standard SCHEMAFULL;
+DEFINE FIELD test_method ON quality_standard TYPE string
+    COMMENT "检测方法";
+DEFINE FIELD acceptance_criteria ON quality_standard TYPE string
+    COMMENT "合格标准";
+DEFINE FIELD sampling_plan ON quality_standard TYPE option<string>
+    COMMENT "抽样方案";
+DEFINE FIELD applicable_products ON quality_standard TYPE option<array>
+    COMMENT "适用产品";
+DEFINE FIELD test_type ON quality_standard TYPE option<string>
+    COMMENT "检测类型: visual/dimensional/functional/material";
+DEFINE FIELD source_id ON quality_standard TYPE record<source>;
+DEFINE FIELD owner_id ON quality_standard TYPE record<user>;
+DEFINE FIELD visibility ON quality_standard TYPE string DEFAULT "private";
+DEFINE FIELD team_ids ON quality_standard TYPE option<array>;
+DEFINE FIELD status ON quality_standard TYPE string DEFAULT "draft";
+DEFINE FIELD created_at ON quality_standard TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated_at ON quality_standard TYPE datetime DEFAULT time::now();
+DEFINE INDEX idx_qs_type ON quality_standard FIELDS test_type;
+DEFINE INDEX idx_qs_status ON quality_standard FIELDS status;
+
+-- ─── 标准操作流程 (SOP) ───
+DEFINE TABLE sop SCHEMAFULL;
+DEFINE FIELD steps ON sop TYPE option<array>
+    COMMENT "操作步骤 [{order, description, note}]";
+DEFINE FIELD precautions ON sop TYPE option<array>
+    COMMENT "注意事项";
+DEFINE FIELD required_tools ON sop TYPE option<array>
+    COMMENT "所需工具";
+DEFINE FIELD position ON sop TYPE option<string>
+    COMMENT "适用岗位";
+DEFINE FIELD equipment ON sop TYPE option<string>
+    COMMENT "适用设备";
+DEFINE FIELD source_id ON sop TYPE record<source>;
+DEFINE FIELD owner_id ON sop TYPE record<user>;
+DEFINE FIELD visibility ON sop TYPE string DEFAULT "private";
+DEFINE FIELD team_ids ON sop TYPE option<array>;
+DEFINE FIELD status ON sop TYPE string DEFAULT "draft";
+DEFINE FIELD created_at ON sop TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated_at ON sop TYPE datetime DEFAULT time::now();
+DEFINE INDEX idx_sop_position ON sop FIELDS position;
+DEFINE INDEX idx_sop_equipment ON sop FIELDS equipment;
+DEFINE INDEX idx_sop_status ON sop FIELDS status;
+
+-- ─── 知识图谱关系 (SurrealDB 图边) ───
+-- FA → 零件 → ECN
+DEFINE TABLE relates_to TYPE RELATION IN fa_report OUT ecn
+    COMMENT "FA 关联 ECN";
+-- FA → 类似故障
+DEFINE TABLE similar_to TYPE RELATION IN fa_report OUT fa_report
+    COMMENT "类似故障";
+-- FA → SOP
+DEFINE TABLE references_sop TYPE RELATION IN fa_report OUT sop
+    COMMENT "FA 参考 SOP";
+-- ECN → 零件
+DEFINE TABLE affects_part TYPE RELATION IN ecn OUT fa_report
+    COMMENT "ECN 影响零件(通过 FA)";
+-- 工艺规范 → 质检标准
+DEFINE TABLE has_quality_standard TYPE RELATION IN process_spec OUT quality_standard
+    COMMENT "工艺规范关联质检标准";
+-- SOP → 工艺规范
+DEFINE TABLE follows_spec TYPE RELATION IN sop OUT process_spec
+    COMMENT "SOP 遵循工艺规范";
+
+-- ─── 任务状态追踪表 ───
+DEFINE TABLE task_status SCHEMAFULL;
+DEFINE FIELD task_type ON task_status TYPE string
+    COMMENT "任务类型: parse/identify/extract/vectorize/classify/graph/publish";
+DEFINE FIELD source_id ON task_status TYPE record<source>;
+DEFINE FIELD status ON task_status TYPE string DEFAULT "queued"
+    COMMENT "状态: queued/processing/completed/failed";
+DEFINE FIELD retry_count ON task_status TYPE int DEFAULT 0;
+DEFINE FIELD error_message ON task_status TYPE option<string>;
+DEFINE FIELD result ON task_status TYPE option<object>;
+DEFINE FIELD created_at ON task_status TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated_at ON task_status TYPE datetime DEFAULT time::now();
+DEFINE INDEX idx_task_source ON task_status FIELDS source_id;
+DEFINE INDEX idx_task_status ON task_status FIELDS status;

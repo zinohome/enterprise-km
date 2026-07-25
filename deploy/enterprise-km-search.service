@@ -1,0 +1,15 @@
+[Unit]
+Description=Enterprise KM Search Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/enterprise-km/search
+ExecStart=/opt/enterprise-km/search/.venv/bin/python3 main.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
