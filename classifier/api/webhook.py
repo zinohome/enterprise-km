@@ -1,47 +1,71 @@
-from fastapi import APIRouter, Request, BackgroundTasks
-from pydantic import BaseModel
-from typing import Optional
+"""
+MinIO Webhook 接收器 — 接收 MinIO 事件，启动处理链路
+"""
+from fastapi import APIRouter, Request, HTTPException
 from loguru import logger
-from classifier.services.file_watcher import process_new_file
+import json
+
+from worker.orchestrator import start_pipeline
 
 router = APIRouter(prefix="/webhook", tags=["webhook"])
 
 
-class MinioEvent(BaseModel):
-    EventName: str
-    Key: str
-    Records: Optional[list] = None
-
-
 @router.post("/minio")
-async def minio_webhook(request: Request, background_tasks: BackgroundTasks):
-    """MinIO bucket notification webhook. Triggers on s3:ObjectCreated:* events."""
+async def minio_webhook(request: Request):
+    """
+    接收 MinIO bucket 事件通知。
+    当文件上传到 MinIO 时，启动文档处理链路。
+    """
     try:
         body = await request.json()
-        logger.info(f"MinIO webhook received: {str(body)[:200]}")
+        logger.info(f"MinIO webhook received: {json.dumps(body, default=str)[:500]}")
+    except Exception:
+        body = await request.body()
+        logger.info(f"MinIO webhook raw: {body[:500]}")
 
-        records = body.get("Records", [body])
-        for record in records:
-            event_name = record.get("eventName", "")
-            key = record.get("s3", {}).get("object", {}).get("key", "")
-            user_meta = record.get("userMetadata", {})
-            user_id = user_meta.get("X-Amz-Meta-User-Id", "unknown")
+    # Parse MinIO event
+    records = body.get("Records", []) if isinstance(body, dict) else []
 
-            if not key:
-                continue
+    results = []
+    for record in records:
+        s3 = record.get("s3", {})
+        bucket_name = s3.get("bucket", {}).get("name", "")
+        object_key = s3.get("object", {}).get("key", "")
 
-            if "ObjectCreated" in event_name:
-                background_tasks.add_task(process_new_file, key, user_id)
-                logger.info(f"Queued processing for: {key} (user: {user_id})")
+        if not object_key:
+            continue
 
-        return {"status": "ok", "message": "Webhook received"}
-    except Exception as e:
-        logger.error(f"Webhook error: {e}")
-        return {"status": "error", "message": str(e)}
+        # Extract user_id from path: user_{id}/...
+        user_id = "system"
+        parts = object_key.split("/")
+        if parts and parts[0].startswith("user_"):
+            user_id = parts[0].replace("user_", "")
+
+        logger.info(f"Processing: bucket={bucket_name}, key={object_key}, user={user_id}")
+
+        # Start pipeline
+        result = start_pipeline(object_key, user_id)
+        results.append(result)
+
+    return {"status": "ok", "processed": len(results), "results": results}
 
 
-@router.post("/process")
-async def manual_process(key: str, user_id: str = None):
-    """Manually trigger file processing."""
-    result = await process_new_file(key, user_id)
+@router.post("/minio/test")
+async def minio_webhook_test(request: Request):
+    """
+    测试端点：手动触发处理链路。
+    POST {"object_key": "user_xxx/path/to/file", "user_id": "xxx"}
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    object_key = body.get("object_key", "")
+    user_id = body.get("user_id", "system")
+
+    if not object_key:
+        raise HTTPException(status_code=400, detail="object_key required")
+
+    result = start_pipeline(object_key, user_id)
     return {"status": "ok", "result": result}

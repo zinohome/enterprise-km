@@ -4,7 +4,8 @@ Enterprise KM Worker — 异步任务处理
 """
 import os
 import sys
-from rq import Worker, Queue, Connection
+from rq import Worker, Queue
+from redis import Redis
 from loguru import logger
 
 # Add project root to path
@@ -24,12 +25,12 @@ import worker.tasks.publish     # noqa: F401
 logger.info(f"Worker starting, connecting to Redis: {REDIS_URL}")
 
 if __name__ == "__main__":
-    with Connection.from_url(REDIS_URL):
-        queues = [
-            Queue("default"),
-            Queue("high"),
-            Queue("low"),
-        ]
-        worker = Worker(queues)
-        logger.info("Worker started, listening for tasks...")
-        worker.work()
+    redis_conn = Redis.from_url(REDIS_URL)
+    queues = [
+        Queue("high", connection=redis_conn),
+        Queue("default", connection=redis_conn),
+        Queue("low", connection=redis_conn),
+    ]
+    worker = Worker(queues, connection=redis_conn)
+    logger.info("Worker started, listening for tasks...")
+    worker.work()
