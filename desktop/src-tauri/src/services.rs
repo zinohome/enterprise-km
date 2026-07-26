@@ -1,12 +1,13 @@
 use std::process::{Child, Command};
 use std::sync::Mutex;
+use std::path::PathBuf;
 use tauri::Manager;
 
 pub struct AppServices {
-    surrealdb: Mutex<Option<Child>>,
-    open_notebook: Mutex<Option<Child>>,
-    rclone: Mutex<Option<Child>>,
-    initialized: Mutex<bool>,
+    pub surrealdb: Mutex<Option<Child>>,
+    pub open_notebook: Mutex<Option<Child>>,
+    pub rclone: Mutex<Option<Child>>,
+    pub initialized: Mutex<bool>,
 }
 
 impl AppServices {
@@ -18,6 +19,73 @@ impl AppServices {
             initialized: Mutex::new(false),
         }
     }
+}
+
+/// Start local services (called by setup wizard)
+pub async fn start_local_services(app: &tauri::AppHandle, app_dir: &PathBuf) -> Result<(), String> {
+    let services = app.state::<AppServices>();
+    let mut initialized = services.initialized.lock().map_err(|e| e.to_string())?;
+    if *initialized {
+        return Ok(());
+    }
+
+    let bin_dir = app_dir.join("bin");
+    let data_dir = app_dir.join("data");
+    let venv_dir = app_dir.join("venv");
+
+    // Start SurrealDB
+    let surreal_bin = bin_dir.join("surreal");
+    if surreal_bin.exists() {
+        let surreal_data = data_dir.join("surrealdb");
+        std::fs::create_dir_all(&surreal_data).ok();
+
+        let child = Command::new(&surreal_bin)
+            .args([
+                "start", "--log", "info",
+                "--user", "root", "--pass", "root",
+                &format!("rocksdb:{}", surreal_data.join("db").display()),
+                "--bind", "127.0.0.1:8001",
+            ])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .map_err(|e| format!("Failed to start SurrealDB: {}", e))?;
+
+        let mut db = services.surrealdb.lock().map_err(|e| e.to_string())?;
+        *db = Some(child);
+    }
+
+    // Start Open Notebook
+    let python_bin = if cfg!(target_os = "windows") {
+        venv_dir.join("Scripts/python.exe")
+    } else {
+        venv_dir.join("bin/python3")
+    };
+
+    if python_bin.exists() {
+        let child = Command::new(&python_bin)
+            .args([
+                "-m", "uvicorn", "api.main:app",
+                "--host", "127.0.0.1", "--port", "5055",
+            ])
+            .env("SURREAL_URL", "ws://127.0.0.1:8001/rpc")
+            .env("SURREAL_USER", "root")
+            .env("SURREAL_PASSWORD", "root")
+            .env("SURREAL_NAMESPACE", "open_notebook")
+            .env("SURREAL_DATABASE", "open_notebook")
+            .env("OPEN_NOTEBOOK_ENCRYPTION_KEY", "local_encryption_key_2024")
+            .current_dir(&venv_dir)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .map_err(|e| format!("Failed to start Open Notebook: {}", e))?;
+
+        let mut on = services.open_notebook.lock().map_err(|e| e.to_string())?;
+        *on = Some(child);
+    }
+
+    *initialized = true;
+    Ok(())
 }
 
 #[tauri::command]
@@ -59,16 +127,10 @@ pub async fn init_environment(app: tauri::AppHandle) -> Result<String, String> {
 
         let child = Command::new(&surreal_bin)
             .args([
-                "start",
-                "--log",
-                "info",
-                "--user",
-                "root",
-                "--pass",
-                "root",
+                "start", "--log", "info",
+                "--user", "root", "--pass", "root",
                 &format!("rocksdb:{}", surreal_data.join("db").display()),
-                "--bind",
-                "127.0.0.1:8001",
+                "--bind", "127.0.0.1:8001",
             ])
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
@@ -89,13 +151,8 @@ pub async fn init_environment(app: tauri::AppHandle) -> Result<String, String> {
     if python_bin.exists() {
         let child = Command::new(&python_bin)
             .args([
-                "-m",
-                "uvicorn",
-                "api.main:app",
-                "--host",
-                "127.0.0.1",
-                "--port",
-                "5055",
+                "-m", "uvicorn", "api.main:app",
+                "--host", "127.0.0.1", "--port", "5055",
             ])
             .env("SURREAL_URL", "ws://127.0.0.1:8001/rpc")
             .env("SURREAL_USER", "root")

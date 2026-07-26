@@ -14,6 +14,7 @@ rfd = "0.15"
 dirs-next = "2"
 notify = { version = "7", features = ["macos_kqueue"] }
 tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

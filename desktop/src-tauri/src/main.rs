@@ -40,8 +40,8 @@ fn main() {
             services::init_environment,
             services::shutdown_services,
             services::get_service_status,
-            setup::run_initialization,
-            setup::check_initialization,
+            run_initialization,
+            check_initialization,
         ])
         .setup(|app| {
             tray::setup_tray(app.handle())?;

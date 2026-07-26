@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::process::Child;
 use std::sync::Mutex;
-use tauri::State;
+use tauri::{Manager, State};
 
 #[derive(Serialize, Clone)]
 pub struct SyncStatus {
@@ -17,6 +17,33 @@ pub struct RcloneState {
     pub user_id: Mutex<String>,
 }
 
+/// Trigger a sync now (called by watcher)
+pub async fn sync_now(app: &tauri::AppHandle) -> Result<(), String> {
+    let state = app.state::<RcloneState>();
+    let mut proc = state.process.lock().map_err(|e| e.to_string())?;
+    if proc.is_some() {
+        return Ok(());
+    }
+
+    let dir = state.status.lock().unwrap().directory.clone();
+    let user_id = state.user_id.lock().unwrap().clone();
+    let remote_path = format!("enterprise-km-minio:enterprise-km/user_{}/", user_id);
+
+    let child = std::process::Command::new("rclone")
+        .args([
+            "sync", &dir, &remote_path,
+            "--verbose", "--exclude", ".DS_Store",
+            "--exclude", "node_modules/**", "--exclude", ".git/**",
+        ])
+        .spawn()
+        .map_err(|e| format!("Failed to start rclone: {}", e))?;
+
+    *proc = Some(child);
+    let mut status = state.status.lock().unwrap();
+    status.running = true;
+    Ok(())
+}
+
 #[tauri::command]
 pub fn start_sync(state: State<RcloneState>) -> Result<SyncStatus, String> {
     let mut proc = state.process.lock().map_err(|e| e.to_string())?;
@@ -30,16 +57,9 @@ pub fn start_sync(state: State<RcloneState>) -> Result<SyncStatus, String> {
 
     let child = std::process::Command::new("rclone")
         .args([
-            "sync",
-            &dir,
-            &remote_path,
-            "--verbose",
-            "--exclude",
-            ".DS_Store",
-            "--exclude",
-            "node_modules/**",
-            "--exclude",
-            ".git/**",
+            "sync", &dir, &remote_path,
+            "--verbose", "--exclude", ".DS_Store",
+            "--exclude", "node_modules/**", "--exclude", ".git/**",
         ])
         .spawn()
         .map_err(|e| format!("Failed to start rclone: {}", e))?;
