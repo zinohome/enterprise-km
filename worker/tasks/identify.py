@@ -23,12 +23,11 @@ IDENTIFY_PROMPT = """你是一个制造业文档分类专家。请分析以下�
 def identify_document_type(source_id: str, content: str):
     """
     AI 识别文档类型。
-    返回文档类型代码。
+    返回文档类型代码，并触发下一步。
     """
     job = get_current_job()
     logger.info(f"Identifying document type for source {source_id}")
 
-    # Truncate content to avoid token limits
     truncated = content[:3000] if len(content) > 3000 else content
 
     try:
@@ -44,10 +43,8 @@ def identify_document_type(source_id: str, content: str):
         resp.raise_for_status()
         doc_type = resp.json()["response"].strip().lower()
 
-        # Normalize
         valid_types = ["fa_report", "ecn", "process_spec", "quality_standard", "sop", "general"]
         if doc_type not in valid_types:
-            # Try to find closest match
             for vt in valid_types:
                 if vt in doc_type:
                     doc_type = vt
@@ -56,7 +53,17 @@ def identify_document_type(source_id: str, content: str):
                 doc_type = "general"
 
         logger.info(f"Identified {source_id} as {doc_type}")
-        return {"source_id": source_id, "doc_type": doc_type}
+
+        result = {"source_id": source_id, "doc_type": doc_type}
+
+        # Trigger next step
+        try:
+            from worker.orchestrator import on_identify_complete
+            on_identify_complete(result)
+        except Exception as e:
+            logger.error(f"Failed to trigger next step: {e}")
+
+        return result
 
     except Exception as e:
         logger.error(f"Failed to identify {source_id}: {e}")

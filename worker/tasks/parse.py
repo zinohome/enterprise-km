@@ -25,7 +25,7 @@ minio_client = Minio(
 def parse_document(object_key: str, user_id: str):
     """
     从 MinIO 下载文件，解析内容，写入 SurrealDB source 表。
-    返回 source_id。
+    返回 source_id，并触发下一步处理链。
     """
     job = get_current_job()
     logger.info(f"Parsing document: {object_key}")
@@ -48,7 +48,6 @@ def parse_document(object_key: str, user_id: str):
         raise
 
     # 3. Store in SurrealDB as a source record
-    # We use the Open Notebook source table structure
     from surrealdb import Surreal
 
     db = Surreal(SURREALDB_URL)
@@ -84,4 +83,13 @@ def parse_document(object_key: str, user_id: str):
         pass
 
     logger.info(f"Parsed document: {object_key} -> source {source_id}")
+
+    # 5. Trigger next step: identify + extract
+    if source_id:
+        try:
+            from worker.orchestrator import on_parse_complete
+            on_parse_complete({"source_id": source_id, "object_key": object_key})
+        except Exception as e:
+            logger.error(f"Failed to trigger next step: {e}")
+
     return {"source_id": source_id, "object_key": object_key}

@@ -1,7 +1,7 @@
 use std::process::{Child, Command};
 use std::sync::Mutex;
 use std::path::PathBuf;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 pub struct AppServices {
     pub surrealdb: Mutex<Option<Child>>,
@@ -21,7 +21,6 @@ impl AppServices {
     }
 }
 
-/// Start local services (called by setup wizard)
 pub async fn start_local_services(app: &tauri::AppHandle, app_dir: &PathBuf) -> Result<(), String> {
     let services = app.state::<AppServices>();
     let mut initialized = services.initialized.lock().map_err(|e| e.to_string())?;
@@ -33,7 +32,6 @@ pub async fn start_local_services(app: &tauri::AppHandle, app_dir: &PathBuf) -> 
     let data_dir = app_dir.join("data");
     let venv_dir = app_dir.join("venv");
 
-    // Start SurrealDB
     let surreal_bin = bin_dir.join("surreal");
     if surreal_bin.exists() {
         let surreal_data = data_dir.join("surrealdb");
@@ -55,7 +53,6 @@ pub async fn start_local_services(app: &tauri::AppHandle, app_dir: &PathBuf) -> 
         *db = Some(child);
     }
 
-    // Start Open Notebook
     let python_bin = if cfg!(target_os = "windows") {
         venv_dir.join("Scripts/python.exe")
     } else {
@@ -102,7 +99,6 @@ pub async fn init_environment(app: tauri::AppHandle) -> Result<String, String> {
     let data_dir = app_dir.join("data");
     let venv_dir = app_dir.join("venv");
 
-    // Run setup script if needed
     let setup_script = app
         .path()
         .resource_dir()
@@ -119,7 +115,6 @@ pub async fn init_environment(app: tauri::AppHandle) -> Result<String, String> {
         }
     }
 
-    // Start SurrealDB
     let surreal_bin = bin_dir.join("surreal");
     if surreal_bin.exists() {
         let surreal_data = data_dir.join("surrealdb");
@@ -141,7 +136,6 @@ pub async fn init_environment(app: tauri::AppHandle) -> Result<String, String> {
         *db = Some(child);
     }
 
-    // Start Open Notebook
     let python_bin = if cfg!(target_os = "windows") {
         venv_dir.join("Scripts/python.exe")
     } else {

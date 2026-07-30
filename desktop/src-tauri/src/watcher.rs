@@ -1,10 +1,9 @@
 use notify::{Event, EventKind, RecursiveMode, Watcher};
 use std::path::PathBuf;
 use std::sync::mpsc;
-use tauri::Manager;
+use tauri::Emitter;
 use std::time::Duration;
 
-/// Start file system watcher for the sync directory.
 pub fn start_watcher(app: tauri::AppHandle, sync_dir: PathBuf) {
     std::thread::spawn(move || {
         let (tx, rx) = mpsc::channel();

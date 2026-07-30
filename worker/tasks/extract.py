@@ -2,6 +2,7 @@
 结构化字段提取 — AI 根据文档类型提取制造业结构化字段
 """
 import json
+import re
 import httpx
 from loguru import logger
 from rq import get_current_job
@@ -65,7 +66,7 @@ EXTRACT_PROMPTS = {
 def extract_fields(source_id: str, content: str, doc_type: str):
     """
     AI 根据文档类型提取结构化字段。
-    返回提取的字段 dict。
+    返回提取的字段 dict，并触发下一步。
     """
     job = get_current_job()
     logger.info(f"Extracting fields for {source_id} (type: {doc_type})")
@@ -87,12 +88,9 @@ def extract_fields(source_id: str, content: str, doc_type: str):
         resp.raise_for_status()
         result_text = resp.json()["response"].strip()
 
-        # Parse JSON
         try:
             fields = json.loads(result_text)
         except json.JSONDecodeError:
-            # Try to extract JSON from text
-            import re
             match = re.search(r'\{.*\}', result_text, re.DOTALL)
             if match:
                 fields = json.loads(match.group())
@@ -100,7 +98,17 @@ def extract_fields(source_id: str, content: str, doc_type: str):
                 fields = {}
 
         logger.info(f"Extracted fields for {source_id}: {list(fields.keys())}")
-        return {"source_id": source_id, "doc_type": doc_type, "fields": fields}
+
+        result = {"source_id": source_id, "doc_type": doc_type, "fields": fields}
+
+        # Trigger next step
+        try:
+            from worker.orchestrator import on_extract_complete
+            on_extract_complete(result)
+        except Exception as e:
+            logger.error(f"Failed to trigger next step: {e}")
+
+        return result
 
     except Exception as e:
         logger.error(f"Failed to extract fields for {source_id}: {e}")

@@ -27,7 +27,6 @@ def build_graph_relations(source_id: str, doc_type: str, fields: dict):
         if doc_type == "fa_report":
             part_number = fields.get("part_number")
             if part_number:
-                # Find other FA reports with same part number
                 result = db.query(f"""
                     SELECT id FROM fa_report
                     WHERE part_number = "{part_number}" AND id != {source_id}
@@ -38,16 +37,15 @@ def build_graph_relations(source_id: str, doc_type: str, fields: dict):
                         db.query(f"RELATE {source_id}->similar_to->{r['id']};")
                         relations_created.append(f"similar_to:{r['id']}")
 
-            # Find related ECNs
-            result = db.query(f"""
-                SELECT id FROM ecn
-                WHERE related_parts CONTAINS "{part_number}"
-                LIMIT 5;
-            """)
-            for r in result:
-                if isinstance(r, dict) and "id" in r:
-                    db.query(f"RELATE {source_id}->relates_to->{r['id']};")
-                    relations_created.append(f"relates_to:{r['id']}")
+                result = db.query(f"""
+                    SELECT id FROM ecn
+                    WHERE related_parts CONTAINS "{part_number}"
+                    LIMIT 5;
+                """)
+                for r in result:
+                    if isinstance(r, dict) and "id" in r:
+                        db.query(f"RELATE {source_id}->relates_to->{r['id']};")
+                        relations_created.append(f"relates_to:{r['id']}")
 
         elif doc_type == "ecn":
             related_parts = fields.get("related_parts", [])
@@ -63,7 +61,6 @@ def build_graph_relations(source_id: str, doc_type: str, fields: dict):
                         relations_created.append(f"affects_part:{r['id']}")
 
         elif doc_type == "process_spec":
-            # Find related quality standards
             result = db.query("SELECT id FROM quality_standard LIMIT 10;")
             for r in result:
                 if isinstance(r, dict) and "id" in r:
@@ -71,7 +68,6 @@ def build_graph_relations(source_id: str, doc_type: str, fields: dict):
                     relations_created.append(f"has_quality_standard:{r['id']}")
 
         elif doc_type == "sop":
-            # Find related process specs
             result = db.query("SELECT id FROM process_spec LIMIT 10;")
             for r in result:
                 if isinstance(r, dict) and "id" in r:
@@ -86,4 +82,13 @@ def build_graph_relations(source_id: str, doc_type: str, fields: dict):
     finally:
         db.close()
 
-    return {"source_id": source_id, "relations": relations_created}
+    result = {"source_id": source_id, "relations": relations_created}
+
+    # Trigger next step
+    try:
+        from worker.orchestrator import on_graph_complete
+        on_graph_complete(result)
+    except Exception as e:
+        logger.error(f"Failed to trigger next step: {e}")
+
+    return result

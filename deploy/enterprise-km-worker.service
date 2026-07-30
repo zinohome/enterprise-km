@@ -1,0 +1,31 @@
+[Unit]
+Description=Enterprise KM Worker
+After=network.target redis.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/enterprise-km
+ExecStart=/opt/enterprise-km/worker/.venv/bin/python -m worker.main
+Restart=always
+RestartSec=5
+Environment=PATH=/opt/enterprise-km/worker/.venv/bin:/usr/bin
+Environment=REDIS_URL=redis://localhost:6379/0
+Environment=MINIO_ENDPOINT=localhost:9000
+Environment=MINIO_ACCESS_KEY=minioadmin
+Environment=MINIO_SECRET_KEY=minioadmin123
+Environment=MINIO_BUCKET=enterprise-km
+Environment=SURREALDB_URL=ws://localhost:8000/rpc
+Environment=SURREALDB_USER=root
+Environment=SURREALDB_PASS=root
+Environment=SURREALDB_NS=enterprise_km
+Environment=SURREALDB_DB=enterprise_km
+Environment=OLLAMA_URL=http://192.168.66.163:11434
+Environment=OLLAMA_MODEL=qwen2.5:7b
+Environment=EMBEDDING_MODEL=bge-m3
+Environment=QDRANT_URL=http://localhost:6333
+Environment=MEILISEARCH_URL=http://localhost:7700
+Environment=MEILISEARCH_KEY=enterprise-km-master-key
+
+[Install]
+WantedBy=multi-user.target

@@ -2,6 +2,7 @@
 自动分类任务 — AI 建议知识树位置
 """
 import json
+import re
 import httpx
 from loguru import logger
 from rq import get_current_job
@@ -51,6 +52,7 @@ CLASSIFY_PROMPT = """你是一个制造业知识管理专家。请根据文档�
 def classify_document(source_id: str, content: str, doc_type: str):
     """
     AI 建议文档分类位置和关键词。
+    完成后触发图谱关联。
     """
     job = get_current_job()
     logger.info(f"Classifying document {source_id}")
@@ -74,12 +76,24 @@ def classify_document(source_id: str, content: str, doc_type: str):
         try:
             classification = json.loads(result_text)
         except json.JSONDecodeError:
-            import re
             match = re.search(r'\{.*\}', result_text, re.DOTALL)
             classification = json.loads(match.group()) if match else {}
 
         logger.info(f"Classified {source_id}: {classification.get('category', 'unknown')}")
-        return {"source_id": source_id, "classification": classification}
+
+        result = {"source_id": source_id, "classification": classification}
+
+        # Trigger graph step
+        try:
+            from worker.orchestrator import on_vectorize_classify_complete
+            on_vectorize_classify_complete(
+                {"source_id": source_id},
+                {"source_id": source_id, "doc_type": doc_type, "fields": {}, "classification": classification},
+            )
+        except Exception as e:
+            logger.error(f"Failed to trigger graph step: {e}")
+
+        return result
 
     except Exception as e:
         logger.error(f"Failed to classify {source_id}: {e}")

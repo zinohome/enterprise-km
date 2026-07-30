@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::process::Child;
 use std::sync::Mutex;
-use tauri::{Manager, State};
+use tauri::{Emitter, Manager, State};
 
 #[derive(Serialize, Clone)]
 pub struct SyncStatus {
@@ -17,9 +17,8 @@ pub struct RcloneState {
     pub user_id: Mutex<String>,
 }
 
-/// Trigger a sync now (called by watcher)
 pub async fn sync_now(app: &tauri::AppHandle) -> Result<(), String> {
-    let state = app.state::<RcloneState>();
+    let state = app.try_state::<RcloneState>().ok_or("State not found")?;
     let mut proc = state.process.lock().map_err(|e| e.to_string())?;
     if proc.is_some() {
         return Ok(());

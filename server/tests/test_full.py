@@ -177,7 +177,7 @@ def test_webhook_minio():
 
 
 def test_webhook_manual_process():
-    resp = httpx.post(f"{CLASSIFIER}/webhook/process?key=test_file.pdf&user_id=test_user")
+    resp = httpx.post(f"{CLASSIFIER}/webhook/minio/test", json={"object_key": "test_file.pdf", "user_id": "test_user"})
     assert resp.status_code == 200
 
 

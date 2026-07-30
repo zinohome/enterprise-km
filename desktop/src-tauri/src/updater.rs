@@ -1,22 +1,17 @@
-use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
+use tauri::Emitter;
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct UpdateInfo {
-    pub version: String,
-    pub notes: String,
-    pub url: String,
+#[tauri::command]
+pub async fn check_update(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let _ = app.emit("update:checking", true);
+
+    Ok(serde_json::json!({
+        "available": false,
+        "version": env!("CARGO_PKG_VERSION"),
+        "message": "已是最新版本",
+    }))
 }
 
 #[tauri::command]
-pub async fn check_update() -> Result<Option<UpdateInfo>, String> {
-    // In production, fetch from a real update server
-    // For now, return no update available
-    Ok(None)
-}
-
-#[tauri::command]
-pub async fn download_update(url: String) -> Result<String, String> {
-    // In production, download and verify the update package
-    Ok(format!("Downloaded from {}", url))
+pub fn get_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
 }

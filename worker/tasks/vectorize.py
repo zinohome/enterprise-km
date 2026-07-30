@@ -2,6 +2,7 @@
 向量化任务 — 调用 bge-m3 生成 embedding，写入 Qdrant
 """
 import json
+import uuid
 import httpx
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
@@ -37,13 +38,11 @@ def vectorize_document(source_id: str, content: str, doc_type: str, fields: dict
 
     ensure_collection()
 
-    # Combine content + extracted fields for better embedding
     text_to_embed = content[:2000] if len(content) > 2000 else content
     if fields:
         text_to_embed += "\n" + json.dumps(fields, ensure_ascii=False)
 
     try:
-        # Generate embedding via Ollama
         resp = httpx.post(
             f"{OLLAMA_URL}/api/embeddings",
             json={"model": EMBEDDING_MODEL, "prompt": text_to_embed},
@@ -52,12 +51,14 @@ def vectorize_document(source_id: str, content: str, doc_type: str, fields: dict
         resp.raise_for_status()
         embedding = resp.json()["embedding"]
 
-        # Write to Qdrant
+        # Qdrant requires UUID or unsigned integer as point ID
+        point_id = str(uuid.uuid4())
+
         qdrant.upsert(
             collection_name=COLLECTION_NAME,
             points=[
                 PointStruct(
-                    id=source_id,
+                    id=point_id,
                     vector=embedding,
                     payload={
                         "source_id": source_id,
@@ -68,8 +69,8 @@ def vectorize_document(source_id: str, content: str, doc_type: str, fields: dict
             ],
         )
 
-        logger.info(f"Vectorized {source_id} ({len(embedding)} dims)")
-        return {"source_id": source_id, "vector_size": len(embedding)}
+        logger.info(f"Vectorized {source_id} -> {point_id} ({len(embedding)} dims)")
+        return {"source_id": source_id, "point_id": point_id, "vector_size": len(embedding)}
 
     except Exception as e:
         logger.error(f"Failed to vectorize {source_id}: {e}")

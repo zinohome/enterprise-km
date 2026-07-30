@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use std::path::PathBuf;
 
 mod rclone;
@@ -48,19 +48,14 @@ fn main() {
 
             let handle = app.handle().clone();
 
-            // Check if first run — show setup wizard
             if setup::needs_initialization(&handle) {
                 let _ = handle.emit("setup:needed", true);
             }
 
-            // Start file watcher for sync directory
             let sync_dir = get_sync_dir(&handle);
             watcher::start_watcher(handle.clone(), sync_dir);
-
-            // Start network monitor
             watcher::start_network_monitor(handle.clone());
 
-            // Auto-init environment on startup
             let h = handle.clone();
             tauri::async_runtime::spawn(async move {
                 let _ = services::init_environment(h).await;
@@ -89,8 +84,6 @@ fn get_sync_dir(app: &tauri::AppHandle) -> PathBuf {
             .join("企业文档")
     }
 }
-
-// ─── Tauri Commands ───
 
 #[tauri::command]
 async fn run_initialization(app: tauri::AppHandle) -> Result<String, String> {

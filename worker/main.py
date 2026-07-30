@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from worker.core.config import REDIS_URL
 
 # Import tasks so they are registered
+import worker.tasks.pipeline    # noqa: F401
 import worker.tasks.parse       # noqa: F401
 import worker.tasks.vectorize   # noqa: F401
 import worker.tasks.classify    # noqa: F401
