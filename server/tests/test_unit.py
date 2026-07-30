@@ -397,7 +397,7 @@ class TestFastAPIApp:
         paths = schema.get("paths", {})
         required = ["/health", "/auth/login", "/auth/register", "/auth/me", "/auth/verify",
                      "/users", "/categories", "/approvals", "/teams", "/search",
-                     "/notifications", "/sync/status", "/curation/publish"]
+                     "/notifications", "/sync/status", "/api/curation/queue"]
         for route in required:
             assert route in paths, f"Missing route: {route}"
 
